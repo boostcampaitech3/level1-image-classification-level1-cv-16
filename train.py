@@ -146,8 +146,10 @@ def train(data_dir, model_dir, args):
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
-        weight_decay=5e-4
+        weight_decay=5e-4,
+        betas=args.betas
     )
+    
     # scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
     scheduler = ReduceLROnPlateau(optimizer, 'min')
 
@@ -158,11 +160,16 @@ def train(data_dir, model_dir, args):
 
     best_val_acc = 0
     best_val_loss = np.inf
+    best_f1 = 0
+
+    wandb.watch(model)
     for epoch in range(args.epochs):
         # train loop
         model.train()
+
         loss_value = 0
         matches = 0
+
         for idx, train_batch in enumerate(train_loader):
             inputs, labels = train_batch
             inputs = inputs.to(device)
@@ -179,6 +186,7 @@ def train(data_dir, model_dir, args):
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
+            
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
@@ -187,18 +195,17 @@ def train(data_dir, model_dir, args):
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
-                logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
-                logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
-
-                wandb.log({
-                    "Train/loss": train_loss,
-                    "Train/accuracy": train_acc,
-                })
+                # logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
+                # logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
 
                 loss_value = 0
                 matches = 0
 
-        scheduler.step()
+                wandb.log({
+                    "Train/loss": train_loss,
+                    "Train/accuracy": train_acc,
+                    "learning rate": current_lr
+                })
 
         # val loop
         with torch.no_grad():
@@ -236,6 +243,10 @@ def train(data_dir, model_dir, args):
             val_acc = np.sum(val_acc_items) / len(val_set)
             f1 = f1_score(torch.cat(label_list).to('cpu'), torch.cat(pred_list).to('cpu'), average = 'macro')
             best_val_loss = min(best_val_loss, val_loss)
+            best_f1 = max(best_f1, f1)
+
+            scheduler.step(val_loss)
+
             if val_acc > best_val_acc:
                 print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
                 torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
@@ -246,17 +257,20 @@ def train(data_dir, model_dir, args):
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} || "
                 f"F1 Score : {f1:.3f}"
             )
-            logger.add_scalar("Val/loss", val_loss, epoch)
-            logger.add_scalar("Val/accuracy", val_acc, epoch)
-            logger.add_figure("results", figure, epoch)
-
-            wandb.log({
-                "results": figure,
-                "Val/loss": val_loss,
-                "Val/accuracy": val_acc,
-                "F1 Score": f1,
-            })
             print()
+
+        wandb.log({
+            "epoch": epoch,
+            "learning rate": current_lr,
+            "Val/loss": val_loss,
+            "Val/accuracy": val_acc,
+            "F1 Score": f1,
+            "results": figure,
+        })
+    wandb.log({
+        "best Val acc": best_val_acc,
+        "best F1": best_f1
+    })
 
 
 if __name__ == '__main__':
@@ -272,15 +286,16 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset augmentation type (default: MaskBaseDataset)')
     parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
     parser.add_argument('--resize', nargs="+", type=int, default=[224, 224], help='resize size for image when training')
+    parser.add_argument('--betas', nargs="+", type=float, default=[0.7, 0.999], help='adam optim betas')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     parser.add_argument('--valid_batch_size', type=int, default=500, help='input batch size for validing (default: 500)')
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer type (default: Adam)')
-    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
     parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
-    parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
+    parser.add_argument('--log_interval', type=int, default=30, help='how many batches to wait before logging training status')
     parser.add_argument('--name', default='exp', help='model save at {SM_MODEL_DIR}/{name}')
 
     # Container environment
