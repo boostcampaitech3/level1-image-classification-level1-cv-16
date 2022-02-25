@@ -243,19 +243,23 @@ def train(data_dir, model_dir, args):
             val_acc = np.sum(val_acc_items) / len(val_set)
             f1 = f1_score(torch.cat(label_list).to('cpu'), torch.cat(pred_list).to('cpu'), average = 'macro')
             best_val_loss = min(best_val_loss, val_loss)
-            best_f1 = max(best_f1, f1)
 
             scheduler.step(val_loss)
 
             if val_acc > best_val_acc:
                 print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-                torch.save(model.module.state_dict(), f"{save_dir}/best.pth")
+                torch.save(model.module.state_dict(), f"{save_dir}/best_acc.pth")
                 best_val_acc = val_acc
-            torch.save(model.module.state_dict(), f"{save_dir}/last.pth")
+            torch.save(model.module.state_dict(), f"{save_dir}/last_acc.pth")
+            if f1 > best_f1:
+                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                torch.save(model.module.state_dict(), f"{save_dir}/best_f1.pth")
+                best_f1 = f1
+            torch.save(model.module.state_dict(), f"{save_dir}/last_f1.pth")
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} || "
-                f"F1 Score : {f1:.3f}"
+                f"F1 Score : {best_f1:.3f}"
             )
             print()
 
@@ -281,9 +285,9 @@ if __name__ == '__main__':
     load_dotenv(verbose=True)
 
     # Data and model checkpoints directories
-    parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
+    parser.add_argument('--seed', type=int, default=16, help='random seed (default: 16)')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
-    parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset augmentation type (default: MaskBaseDataset)')
+    parser.add_argument('--dataset', type=str, default='MaskSplitByProfileDataset', help='dataset augmentation type (default: MaskSplitByProfileDataset)')
     parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
     parser.add_argument('--resize', nargs="+", type=int, default=[224, 224], help='resize size for image when training')
     parser.add_argument('--betas', nargs="+", type=float, default=[0.7, 0.999], help='adam optim betas')

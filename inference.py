@@ -10,7 +10,7 @@ import multiprocessing
 from dataset import TestDataset, MaskBaseDataset
 
 
-def load_model(saved_model, num_classes, device):
+def load_model(saved_model, num_classes, device, flag):
     model_cls = getattr(import_module("model"), args.model)
     model = model_cls(
         num_classes=num_classes
@@ -19,8 +19,11 @@ def load_model(saved_model, num_classes, device):
     # tarpath = os.path.join(saved_model, 'best.tar.gz')
     # tar = tarfile.open(tarpath, 'r:gz')
     # tar.extractall(path=saved_model)
+    if flag == 'f1': # f1
+        model_path = os.path.join(saved_model, 'best_f1.pth')
+    else: # acc
+        model_path = os.path.join(saved_model, 'best_acc.pth')
 
-    model_path = os.path.join(saved_model, 'best.pth')
     model.load_state_dict(torch.load(model_path, map_location=device))
 
     return model
@@ -34,7 +37,7 @@ def inference(data_dir, model_dir, output_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     num_classes = MaskBaseDataset.num_classes  # 18
-    model = load_model(model_dir, num_classes, device).to(device)
+    model = load_model(model_dir, num_classes, device, args.score).to(device)
     model.eval()
 
     img_root = os.path.join(data_dir, 'images')
@@ -73,6 +76,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=500, help='input batch size for validing (default: 500)')
     parser.add_argument('--resize', type=tuple, default=(224, 224), help='resize size for image when you trained (default: (96, 128))')
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
+    parser.add_argument('--score', type=str, default='acc', help='select the model at the point where the desired value (acc, f1)')
+
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/input/data/eval'))
