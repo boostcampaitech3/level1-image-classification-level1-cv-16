@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import DataLoader
 import multiprocessing
 
+import ttach as tta # TTA 라이브러리 추가
+
 from dataset import TestDataset, MaskBaseDataset
 
 
@@ -39,11 +41,26 @@ def load_model(saved_model, num_classes, device, args):
 def inference(data_dir, model_dir, output_dir, args):
     """
     """
+    TTA_transform = tta.Compose( # augmentation for TTA
+        [
+            tta.HorizontalFlip(),
+            # tta.VerticalFlip(),
+            # tta.Scale(scales=[1, 2, 4]),
+            # tta.Multiply(factors=[0.8, 1, 1.1]),        
+            # tta.FiveCrops()
+        ]
+    )
+
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     num_classes = MaskBaseDataset.num_classes  # 18
     model, target_name = load_model(model_dir, num_classes, device, args)
+
+    if args.TTA == "True":
+        print("TTA is applied...")
+        model = tta.ClassificationTTAWrapper(model, TTA_transform)
+
     model.to(device)
     model.eval()
 
@@ -87,6 +104,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
     parser.add_argument('--score', type=str, default='acc', help='select the model at the point where the desired value (acc, f1, epoch)')
     parser.add_argument('--target_epoch', type=int, default=0, help='select input epoch model_dict') 
+    parser.add_argument('--TTA', type=str, default="False", help="TTA (default: False")
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/input/data/eval'))
