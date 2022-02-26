@@ -10,7 +10,7 @@ import multiprocessing
 from dataset import TestDataset, MaskBaseDataset
 
 
-def load_model(saved_model, num_classes, device, flag):
+def load_model(saved_model, num_classes, device, args):
     model_cls = getattr(import_module("model"), args.model)
     model = model_cls(
         num_classes=num_classes
@@ -19,14 +19,20 @@ def load_model(saved_model, num_classes, device, flag):
     # tarpath = os.path.join(saved_model, 'best.tar.gz')
     # tar = tarfile.open(tarpath, 'r:gz')
     # tar.extractall(path=saved_model)
-    if flag == 'f1': # f1
+    if args.score == 'f1': # f1
+        target_name = 'best_f1'
         model_path = os.path.join(saved_model, 'best_f1.pth')
-    else: # acc
+    elif args.score == 'acc': # acc
+        target_name = 'best_acc'
         model_path = os.path.join(saved_model, 'best_acc.pth')
+    else: # epoch
+        target_name = 'epoch' + str(args.target_epoch)
+        statedict_name = 'epoch' + str(args.target_epoch) + '.pth'
+        model_path = os.path.join(saved_model, target_name)
 
     model.load_state_dict(torch.load(model_path, map_location=device))
 
-    return model
+    return model, target_name
 
 
 @torch.no_grad()
@@ -37,7 +43,8 @@ def inference(data_dir, model_dir, output_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     num_classes = MaskBaseDataset.num_classes  # 18
-    model = load_model(model_dir, num_classes, device, args.score).to(device)
+    model, target_name = load_model(model_dir, num_classes, device, args)
+    model.to(device)
     model.eval()
 
     img_root = os.path.join(data_dir, 'images')
@@ -63,9 +70,11 @@ def inference(data_dir, model_dir, output_dir, args):
             pred = model(images)
             pred = pred.argmax(dim=-1)
             preds.extend(pred.cpu().numpy())
+    model_name = args.model_dir.split('/')[-1]
+    output_name = model_name + '_' + target_name + '.csv'
 
     info['ans'] = preds
-    info.to_csv(os.path.join(output_dir, f'output.csv'), index=False)
+    info.to_csv(os.path.join(output_dir, output_name), index=False)
     print(f'Inference Done!')
 
 
@@ -73,11 +82,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Data and model checkpoints directories
-    parser.add_argument('--batch_size', type=int, default=500, help='input batch size for validing (default: 500)')
-    parser.add_argument('--resize', type=tuple, default=(224, 224), help='resize size for image when you trained (default: (96, 128))')
+    parser.add_argument('--batch_size', type=int, default=100, help='input batch size for validing (default: 100)')
+    parser.add_argument('--resize', type=tuple, default=(512, 512), help='resize size for image when you trained (default: (96, 128))')
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
-    parser.add_argument('--score', type=str, default='acc', help='select the model at the point where the desired value (acc, f1)')
-
+    parser.add_argument('--score', type=str, default='acc', help='select the model at the point where the desired value (acc, f1, epoch)')
+    parser.add_argument('--target_epoch', type=int, default=0, help='select input epoch model_dict') 
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/input/data/eval'))

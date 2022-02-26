@@ -262,6 +262,8 @@ def train(data_dir, model_dir, args):
                 f"F1 Score : {best_f1:.3f}"
             )
             print()
+        
+        torch.save(model.module.state_dict(), f"{save_dir}/epoch{epoch}.pth")
 
         wandb.log({
             "epoch": epoch,
