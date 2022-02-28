@@ -1,8 +1,16 @@
-__pycache__
-model
-wandb
-output
+__pycache__/
+.ipynb_checkpoints
 
-data
+# virtualenv
+.venv
+venv/
+ENV/
 
-nohup.out
+data/
+model_weights/
+wandb/
+output/
+
+.vscode/
+.idea/
+__MACOSX/
