@@ -3,6 +3,7 @@ import torch
 from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import *
+from RandAugment import RandAugment
 
 class Cutout(object):
     """Randomly mask out one or more patches from an image.
@@ -53,6 +54,28 @@ class CutoutTransform:
                 Cutout(1, cutout),
                 Normalize(mean=mean, std=std),
             ])
+        else:
+            self.transform = transforms.Compose([
+                CenterCrop(350),
+                Resize(resize, Image.BILINEAR),
+                ToTensor(),
+                Normalize(mean=mean, std=std),
+            ])
+
+    def __call__(self, image):
+        return self.transform(image)
+
+class RandomAugTransform:
+    def __init__(self, augment, resize, cutout, n=3, m=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
+        if augment:
+            self.transform = transforms.Compose([
+                CenterCrop(350),
+                Resize(resize, Image.BILINEAR),
+                ToTensor(),
+                Cutout(1, cutout),
+                Normalize(mean=mean, std=std),
+            ])
+            self.transform.transforms.insert(1, RandAugment(n,m))
         else:
             self.transform = transforms.Compose([
                 CenterCrop(350),
