@@ -23,9 +23,9 @@ class KFold:
 
         df = self._data_preprocessing(df)
 
-        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-        for train_idx, test_idx in skf.split(df, df["age"]):
+        for train_idx, test_idx in skf.split(df, df["age"] + 3 * df["gender"]):
             df_strat_train = self._generate_path_and_mask_and_label_field(df.loc[train_idx])
             df_strat_test = self._generate_path_and_mask_and_label_field(df.loc[test_idx])
             self.folds.append([df_strat_train.reset_index(), df_strat_test.reset_index()])

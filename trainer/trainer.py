@@ -41,7 +41,7 @@ class Trainer:
         # -- transform
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
         train_transform = transform_module(augment=True, **config.augmentation.args)
-        test_transform = transform_module(augment=True, **config.augmentation.args)
+        test_transform = transform_module(augment=False, **config.augmentation.args)
 
         train_set = MaskDataset(train_df, transform=train_transform, target=config.target)
         val_set = MaskDataset(val_df, transform=test_transform, target=config.target)

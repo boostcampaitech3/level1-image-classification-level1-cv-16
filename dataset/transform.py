@@ -44,7 +44,7 @@ class Cutout(object):
         return img
 
 class CutoutTransform:
-    def __init__(self, augment, resize, cutout, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):    
+    def __init__(self, augment, resize, cutout, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
         if augment:
             self.transform = transforms.Compose([
                 CenterCrop(350),
@@ -67,7 +67,7 @@ class CutoutTransform:
 
 # 위와 같이 원하는 인자를 넣고, config에도 추가를 하면 custom하여 만들 수 있습니다!
 class CustomTransform:
-    def __init__(self, augment, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):    
+    def __init__(self, augment, resize, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
         if augment:
             self.transform = transforms.Compose([
                 CenterCrop(350),
