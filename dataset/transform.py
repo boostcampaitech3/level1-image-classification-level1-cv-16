@@ -3,6 +3,8 @@ import torch
 from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import *
+from RandAugment import RandAugment
+
 
 class Cutout(object):
     """Randomly mask out one or more patches from an image.
@@ -21,30 +23,32 @@ class Cutout(object):
         Returns:
             Tensor: Image with n_holes of dimension length x length cut out of it.
         """
-        h = img.size(1)
-        w = img.size(2)
+        r = np.random.rand(1)
+        if r > 0.5:
+            h = img.size(1)
+            w = img.size(2)
 
-        mask = np.ones((h, w), np.float32)
+            mask = np.ones((h, w), np.float32)
 
-        for n in range(self.n_holes):
-            y = np.random.randint(h)
-            x = np.random.randint(w)
+            for n in range(self.n_holes):
+                y = np.random.randint(h)
+                x = np.random.randint(w)
 
-            y1 = np.clip(y - self.length // 2, 0, h)
-            y2 = np.clip(y + self.length // 2, 0, h)
-            x1 = np.clip(x - self.length // 2, 0, w)
-            x2 = np.clip(x + self.length // 2, 0, w)
+                y1 = np.clip(y - self.length // 2, 0, h)
+                y2 = np.clip(y + self.length // 2, 0, h)
+                x1 = np.clip(x - self.length // 2, 0, w)
+                x2 = np.clip(x + self.length // 2, 0, w)
 
-            mask[y1: y2, x1: x2] = 0.
+                mask[y1: y2, x1: x2] = 0.
 
-        mask = torch.from_numpy(mask)
-        mask = mask.expand_as(img)
-        img = img * mask
+            mask = torch.from_numpy(mask)
+            mask = mask.expand_as(img)
+            img = img * mask
 
         return img
 
 class CutoutTransform:
-    def __init__(self, augment, resize, cutout, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):    
+    def __init__(self, augment, resize, cutout, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
         if augment:
             self.transform = transforms.Compose([
                 CenterCrop(350),
@@ -64,6 +68,28 @@ class CutoutTransform:
     def __call__(self, image):
         return self.transform(image)
 
+
+class RandomAugTransform:
+    def __init__(self, augment, resize, cutout, n=3, m=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        if augment:
+            self.transform = transforms.Compose([
+                CenterCrop((400,300)),
+                # Resize(resize, Image.BILINEAR),
+                ToTensor(),
+                Cutout(1, cutout),
+                Normalize(mean=mean, std=std),
+            ])
+            self.transform.transforms.insert(1, RandAugment(n, m))
+        else:
+            self.transform = transforms.Compose([
+                # CenterCrop(350),
+                # Resize(resize,Image.BILINEAR),
+                ToTensor(),
+                Normalize(mean=mean, std=std),
+            ])
+    
+    def __call__(self, image):
+        return self.transform(image)
 
 # 위와 같이 원하는 인자를 넣고, config에도 추가를 하면 custom하여 만들 수 있습니다!
 class CustomTransform:

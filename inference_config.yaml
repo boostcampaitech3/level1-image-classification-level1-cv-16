@@ -2,7 +2,7 @@ inference:
   model:
     name: efficientnet_b3
 
-  score: acc # f1, acc, epoch5
+  score: f1 # f1, acc, epoch5
 
   # 학습한 모델과 동일한 설정을 사용해야 합니다!
   # cutout은 진행되지 않습니다!
@@ -14,12 +14,12 @@ inference:
 
   # 공식 문서에 있는 설정을 더 추가할 수 있습니다
   data_loader:
-    batch_size: 50
+    batch_size: 64
     shuffle: False
     drop_last: False
 
 inferencer:
-  csv_path: ./data/eval/info.csv
-  img_path: ./data/eval/images
-  model_dir: ./model_weights/effnetb3
+  csv_path: ../input/data/eval/info.csv
+  img_path: ../input/data/eval/images
+  model_dir: ./model_weights/effnetb315
   save_dir: ./output

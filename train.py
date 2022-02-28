@@ -9,6 +9,7 @@ import yaml
 from utils import DictAsMember
 from trainer import Trainer
 
+
 def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)

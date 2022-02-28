@@ -3,8 +3,8 @@ name: effnetb3
 seed: 16
 
 wandb:
-  project: devlee247_v100
-  flag: False
+  project: hsy_project
+  flag: True
 
 train:
   # 학습 대상을 정할 수 있습니다.
@@ -17,27 +17,31 @@ train:
     n_splits: 5
     random_state: 1004
 
-  epochs: 1
+  epochs: 20
 
   augmentation: 
-    name: CutoutTransform
+    name: RandomAugTransform # RandomAugTransform, CutoutTransform
     args:
       resize: 512
       cutout: 130
+      n: 3
+      m: 0.5
 
   # 공식 문서에 있는 설정을 더 추가할 수 있습니다
   data_loader:
-    batch_size: 16
-    shuffle: True
+    batch_size: 64
+    shuffle: False
+    drop_last: True
   val_data_loader:
-    batch_size: 50
+    batch_size: 128
+    drop_last: True
 
   optimizer:
     type: Adam
     args:
       lr: 0.00001
-      weight_decay: 0
-      betas: [0.7, 0.999]
+      weight_decay: 0.005 # 0.0001, 0.005
+      betas: [0.7, 0.999] # 0.7 0.999
       amsgrad: true
 
   loss:
@@ -51,8 +55,12 @@ train:
 
   log_interval: 20
 
+  cut_mix:
+    prob: 0.0
+    beta: 1.
+
 trainer:
-  csv_path: ./data/train/train.csv
-  img_path: ./data/train/images
+  csv_path: ./train_all.csv
+  img_path: ../input/data/train/test_images
   save_dir: ./model_weights
-  
+  aug_csv_path: False

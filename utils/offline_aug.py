@@ -29,6 +29,7 @@ df_test = pd.read_csv('./data/train/test_train.csv') # 기존 train.csv를 복�
 
 # 이미지 폴더를 복사하여 사용
 print("Image dir copy complete!")
+aug_df = pd.DataFrame(None, columns=['id', 'gender', 'race', 'age', 'path'])
 
 update = df_test
 for i in range(len(df)):
@@ -48,7 +49,20 @@ for i in range(len(df)):
                         'race' : df_test['race'][i], 'age' : 60,
                         'path' : df_test['path'][i]+'_noise'}, ignore_index=True)          
         update.to_csv('./data/train/test_train.csv', header=True, index=True)
-        
+
+        aug_df = aug_df.append({'id' : str(int(update.iloc[-1]['id'])+1).zfill(6),
+                        'gender' : df_test['gender'][i],
+                        'race' : df_test['race'][i], 'age' : 60,
+                        'path' : df_test['path'][i]+'_inverted'}, ignore_index=True)
+        aug_df = aug_df.append({'id' : str(int(update.iloc[-1]['id'])+2).zfill(6),
+                        'gender' : df_test['gender'][i],
+                        'race' : df_test['race'][i], 'age' : 60,
+                        'path' : df_test['path'][i]+'_rotated'}, ignore_index=True)
+        aug_df = aug_df.append({'id' : str(int(update.iloc[-1]['id'])+3).zfill(6),
+                        'gender' : df_test['gender'][i],
+                        'race' : df_test['race'][i], 'age' : 60,
+                        'path' : df_test['path'][i]+'_noise'}, ignore_index=True)          
+
         try:
             target = "/".join(img_list[0].split('/')[:-1])
         except IndexError:
@@ -80,3 +94,6 @@ for i in range(len(df)):
             noisy_array = img2 + gauss
             noisy_image = Image.fromarray(np.uint8(noisy_array)).convert('RGB')
             noisy_image.save(target+'_noise/'+im.split('/')[-1].split('.')[0]+'_noise.jpg')
+
+aug_df['age'] = aug_df['age'].astype(int)
+aug_df.to_csv('./data/train/aug_train.csv', index=False)   

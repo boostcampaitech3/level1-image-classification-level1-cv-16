@@ -8,7 +8,7 @@ import torch
 import pandas as pd
 from torch.optim.lr_scheduler import *
 from torch.utils.data import DataLoader
-
+from torchsampler import ImbalancedDatasetSampler
 from sklearn.metrics import f1_score
 
 from model import criterion_entrypoint
@@ -19,9 +19,10 @@ from utils import *
 
 
 class Trainer:
-    def __init__(self, config, csv_path, img_path, save_dir):
+    def __init__(self, config, csv_path, img_path, save_dir, aug_csv_path=False):
         self.csv_path = csv_path
         self.img_path = img_path
+        self.aug_csv_path = aug_csv_path
         self.save_dir = increment_path(os.path.join(save_dir, config.name))
         makedirs(self.save_dir)
         increment_name = self.save_dir.split('/')[-1]
@@ -37,17 +38,22 @@ class Trainer:
 
         if pseudo_df:
             train_df = pd.concat([pseudo_df, train_df])
+        
+        if self.aug_csv_path:
+            aug_df = folds.get_preprocessed_df(self.aug_csv_path)
+            train_df = pd.concat([aug_df, train_df])
 
         # -- transform
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
         train_transform = transform_module(augment=True, **config.augmentation.args)
-        test_transform = transform_module(augment=True, **config.augmentation.args)
+        test_transform = transform_module(augment=False, **config.augmentation.args)
 
         train_set = MaskDataset(train_df, transform=train_transform, target=config.target)
         val_set = MaskDataset(val_df, transform=test_transform, target=config.target)
 
         train_loader = DataLoader(
             train_set, 
+            sampler=ImbalancedDatasetSampler(train_set),
             num_workers=multiprocessing.cpu_count()//2,
             pin_memory=self.use_cuda,
             **config.data_loader
@@ -92,10 +98,27 @@ class Trainer:
                 inputs, labels = train_batch[0].to(self.device), train_batch[1].to(self.device)
 
                 optimizer.zero_grad()
-
-                outs = model(inputs)
-                preds = torch.argmax(outs, dim=-1)
-                loss = criterion(outs, labels)
+                
+                # cut-mix by clova
+                r = np.random.rand(1)
+                if config.cut_mix.beta > 0 and config.cut_mix.prob > r:
+                    # generate mixed sample
+                    lam = np.random.beta(config.cut_mix.beta, config.cut_mix.beta)
+                    rand_index = torch.randperm(inputs.size()[0]).cuda()
+                    target_a = labels
+                    target_b = labels[rand_index]
+                    bbx1, bby1, bbx2, bby2 = rand_bbox(inputs.size(), lam)
+                    inputs[:, :, bbx1:bbx2, bby1:bby2] = inputs[rand_index, :, bbx1:bbx2, bby1:bby2]
+                    # adjust lambda to exactly match pixel ratip
+                    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (inputs.size()[-1] * inputs.size()[-2]))
+                    # compute output
+                    outs = model(inputs)
+                    preds = torch.argmax(outs, dim=-1)
+                    loss = criterion(outs, target_a) * lam + criterion(outs, target_b) * (1. - lam)
+                else:
+                    outs = model(inputs)
+                    preds = torch.argmax(outs, dim=-1)
+                    loss = criterion(outs, labels)
 
                 loss.backward()
                 optimizer.step()

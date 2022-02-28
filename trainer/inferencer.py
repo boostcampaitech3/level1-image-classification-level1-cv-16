@@ -57,6 +57,7 @@ class Inferencer:
         )
 
         print("Calculating inference results..")
+        model.eval()
         preds = []
         with torch.no_grad():
             for idx, images in enumerate(loader):

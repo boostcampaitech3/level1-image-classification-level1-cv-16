@@ -21,15 +21,48 @@ class KFold:
     def _generate_kfold(self, n_splits, random_state):
         df = pd.read_csv(self.csv_path)
 
-        df = self._data_preprocessing(df)
+        # df = self._data_preprocessing(df)
 
-        skf = StratifiedKFold(n_splits=n_splits, shuffle=True)
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-        for train_idx, test_idx in skf.split(df, df["age"]):
+        for train_idx, test_idx in skf.split(df, df["age"] + 3 * df["gender"]):
+            # augment한 데이터를 train에 기존 데이터를 val에
+            trans_train = train_idx
+            trans_test = test_idx
+            for t in train_idx:
+                tmp = df.loc[t]['path'].split('_')
+                if tmp[3] == '60':
+                    if len(tmp) != 5:
+                        trans_train.remove(t)
+                        trans_test.append(t)
+            for v in test_idx:
+                tmp = df.loc[v]['path'].split('_')
+                if tmp[3] == 60:
+                    if len(tmp) == 5:
+                        trans_test.remove(t)
+                        trans_train.append(t)
+            train_idx = trans_train
+            test_idx = trans_test
+
             df_strat_train = self._generate_path_and_mask_and_label_field(df.loc[train_idx])
             df_strat_test = self._generate_path_and_mask_and_label_field(df.loc[test_idx])
+            # df_strat_train = df.loc[train_idx]
+            # df_strat_test = df.loc[test_idx]
             self.folds.append([df_strat_train.reset_index(), df_strat_test.reset_index()])
-    
+
+    def get_preprocessed_df(self, aug_csv_path):
+        df = pd.read_csv(aug_csv_path)
+
+        age_label = [0, 29, 59, 120]
+        df['age'] = pd.cut(df['age'], age_label, labels=False)
+
+        gender_label = {'male':0, 'female':1}
+        df['gender'] = df['gender'].map(gender_label)
+
+        df = self._generate_path_and_mask_and_label_field(df)
+        return df
+
+
     def _data_preprocessing(self, df):
         # age & gender categorize
         df = self._correct_age_gender_label(df)
@@ -72,7 +105,7 @@ class KFold:
         
         df['mask'] = df['mask'].map(mask_mapping)
 
-        df = self._correct_mask_label(df)
+        # df = self._correct_mask_label(df)
         df['label'] = df['mask'] * 6 + df['gender'] * 3 + df['age']
         return df
 

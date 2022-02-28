@@ -30,6 +30,8 @@ class efficientnet_b3(nn.Module):
         torch.nn.init.xavier_uniform_(self.model.classifier[1].weight)
         stdv = 1. / math.sqrt(self.model.classifier[1].weight.size(1))
         self.model.classifier[1].bias.data.uniform_(-stdv, stdv)
+        # self.model.classifier[2] = nn.SiLU(inplace=True)
+        # self.model.classifier[3] = nn.Dropout(p=0.5, inplace=True)
         """
         1. 위와 같이 생성자의 parameter 에 num_claases 를 포함해주세요.
         2. 나만의 모델 아키텍쳐를 디자인 해봅니다.
