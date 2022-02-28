@@ -19,9 +19,10 @@ from utils import *
 
 
 class Trainer:
-    def __init__(self, config, csv_path, img_path, save_dir):
+    def __init__(self, config, csv_path, img_path, save_dir, aug_csv_path=False):
         self.csv_path = csv_path
         self.img_path = img_path
+        self.aug_csv_path = aug_csv_path
         self.save_dir = increment_path(os.path.join(save_dir, config.name))
         makedirs(self.save_dir)
         increment_name = self.save_dir.split('/')[-1]
@@ -37,6 +38,10 @@ class Trainer:
 
         if pseudo_df:
             train_df = pd.concat([pseudo_df, train_df])
+
+        if self.aug_csv_path:
+            aug_df = folds.get_preprocessed_df(self.aug_csv_path)
+            train_df = pd.concat([pseudo_df, aug_df])
 
         # -- transform
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
