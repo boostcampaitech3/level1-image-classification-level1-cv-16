@@ -9,6 +9,8 @@ from dataset import MaskTestDataset
 from dataset.transform import *
 from utils import *
 
+import ttach as tta
+
 def load_model(saved_model, num_classes, device, config):
     model_cls = getattr(import_module("model"), config.model.name)
     model = model_cls(
@@ -21,8 +23,8 @@ def load_model(saved_model, num_classes, device, config):
         target_name = 'best_acc'
         model_path = os.path.join(saved_model, 'best_acc.pth')
     else: # epoch
-        target_name = 'epoch' + str(config.target_epoch)
-        statedict_name = 'epoch' + str(config.target_epoch) + '.pth'
+        target_name = config.score
+        statedict_name = target_name + '.pth'
         model_path = os.path.join(saved_model, statedict_name)
 
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -45,7 +47,20 @@ class Inferencer:
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
         test_transform = transform_module(augment=False, **config.augmentation.args)
 
+        # -- TTA transform
+        TTA_transform = tta.Compose(
+            [
+                tta.HorizontalFlip(),
+                # tta.VerticalFlip(),
+                # tta.Scale(scales=[1, 1.1, 0.9]),
+            ]
+        )
+
         model, target_name = load_model(self.model_dir, 18, self.device, config)
+
+        if config.TTA.flag == True:
+            print("TTA is applied...")
+            model = tta.ClassificationTTAWrapper(model, TTA_transform)
         model.to(self.device)
 
         dataset = MaskTestDataset(test_df, img_path=self.img_path, transform=test_transform)
@@ -65,7 +80,12 @@ class Inferencer:
                 pred = pred.argmax(dim=-1)
                 preds.extend(pred.cpu().numpy())
         model_name = self.model_dir.split('/')[-1]
+        
         output_name = model_name + '_' + target_name + '.csv'
+        
+        if config.TTA.flag == True:
+            output_name = "TTA_" + output_name
+        
 
         info = pd.read_csv(self.csv_path)
 
