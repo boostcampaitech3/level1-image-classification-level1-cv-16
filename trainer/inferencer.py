@@ -47,6 +47,7 @@ class Inferencer:
 
         model, target_name = load_model(self.model_dir, 18, self.device, config)
         model.to(self.device)
+        model.eval()
 
         dataset = MaskTestDataset(test_df, img_path=self.img_path, transform=test_transform)
         loader = torch.utils.data.DataLoader(
