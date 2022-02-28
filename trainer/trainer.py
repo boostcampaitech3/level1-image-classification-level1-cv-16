@@ -41,7 +41,7 @@ class Trainer:
 
         if self.aug_csv_path:
             aug_df = folds.get_preprocessed_df(self.aug_csv_path)
-            train_df = pd.concat([pseudo_df, aug_df])
+            train_df = pd.concat([aug_df, train_df])
 
         # -- transform
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
