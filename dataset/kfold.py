@@ -29,6 +29,18 @@ class KFold:
             df_strat_train = self._generate_path_and_mask_and_label_field(df.loc[train_idx])
             df_strat_test = self._generate_path_and_mask_and_label_field(df.loc[test_idx])
             self.folds.append([df_strat_train.reset_index(), df_strat_test.reset_index()])
+
+    def get_preprocessed_df(self, aug_csv_path):
+        df = pd.read_csv(aug_csv_path)
+
+        age_label = [0, 29, 59, 120]
+        df['age'] = pd.cut(df['age'], age_label, labels=False)
+
+        gender_label = {'male':0, 'female':1}
+        df['gender'] = df['gender'].map(gender_label)
+
+        df = self._generate_path_and_mask_and_label_field(df)
+        return df
     
     def _data_preprocessing(self, df):
         # age & gender categorize
@@ -69,7 +81,7 @@ class KFold:
         df = df.explode('mask')
         
         df['path'] = df.apply(lambda row: self._search_image(row['path'], row['mask']), axis=1)
-        
+
         df['mask'] = df['mask'].map(mask_mapping)
 
         df = self._correct_mask_label(df)
