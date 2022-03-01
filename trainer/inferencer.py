@@ -48,7 +48,6 @@ class Inferencer:
         model, target_name = load_model(self.model_dir, 18, self.device, config)
         model.to(self.device)
         model.eval()
-
         dataset = MaskTestDataset(test_df, img_path=self.img_path, transform=test_transform)
         loader = torch.utils.data.DataLoader(
             dataset,
@@ -72,4 +71,60 @@ class Inferencer:
 
         info['ans'] = preds
         info.to_csv(os.path.join(self.save_dir, output_name), index=False)
+        print(f'Inference Done!')
+    
+
+    def inference_with_confidence(self, config):
+        test_df = pd.read_csv(self.csv_path)
+
+        # -- transform
+        transform_module = getattr(import_module("dataset"), config.augmentation.name)
+        test_transform = transform_module(augment=False, **config.augmentation.args)
+
+        model, target_name = load_model(self.model_dir, 18, self.device, config)
+        model.to(self.device)
+
+        dataset = MaskTestDataset(test_df, img_path=self.img_path, transform=test_transform)
+        loader = torch.utils.data.DataLoader(
+            dataset,
+            num_workers=multiprocessing.cpu_count()//2,
+            pin_memory=self.use_cuda,
+            **config.data_loader
+        )
+
+        print("Calculating inference results..")
+        preds = []
+        probs = []
+        cons = []
+        with torch.no_grad():
+            for idx, images in enumerate(loader):
+                images = images.to(self.device)
+                pred = model(images)
+                prob = torch.nn.Softmax(dim = -1)(pred)
+                con, pred = prob.max(1)
+                preds.extend(pred.cpu().numpy())
+                probs.extend(prob.cpu().numpy())
+                cons.extend(con.cpu().numpy())
+        model_name = self.model_dir.split('/')[-1]
+
+        output_name = model_name + '_' + target_name + '.csv'
+        pseudo_name = model_name + '_' + target_name + '_pseudo.csv'
+        ensemble_name = model_name + '_' + target_name + '_ensemble.csv'
+        info = pd.read_csv(self.csv_path)
+
+        info['ans'] = preds
+        info.to_csv(os.path.join(self.save_dir, output_name), index=False)
+
+        info['confidence'] = cons
+        info.rename(columns = {"ImageID" : "path", "ans" : 'label'}, inplace = True)
+        info['path'] = './data/eval/images/' + info['path']
+        info = info.sort_values(by = ['confidence'], ascending = False)
+        df_pseudo = info.iloc[0:len(info) // 2]
+        df_pseudo.to_csv(os.path.join(self.save_dir, pseudo_name), index=False)
+        
+        info = pd.read_csv(self.csv_path)['ImageID']
+        df_prob = pd.DataFrame(probs)
+        info = pd.concat([info, df_prob], axis = 1)
+        info.to_csv(os.path.join(self.save_dir, ensemble_name), index=False)
+
         print(f'Inference Done!')
