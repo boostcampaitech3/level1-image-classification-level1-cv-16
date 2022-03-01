@@ -1,0 +1,66 @@
+---
+name: ViT-adamw-b32
+seed: 16
+
+wandb:
+  project: hsy_project
+  flag: True
+
+train:
+  # 학습 대상을 정할 수 있습니다.
+  target: label # label, age, gender, mask,
+
+  model:
+    name: VisionTransformer # efficientnet_b3
+
+  fold:
+    n_splits: 5
+    random_state: 1004
+
+  epochs: 20
+
+  augmentation: 
+    name: RandomAugTransform # RandomAugTransform, CutoutTransform
+    args:
+      resize: 512
+      cutout: 130
+      n: 3
+      m: 0.5
+
+  # 공식 문서에 있는 설정을 더 추가할 수 있습니다
+  data_loader:
+    batch_size: 32
+    shuffle: False
+    drop_last: False
+  val_data_loader:
+    batch_size: 64
+    drop_last: False
+
+  optimizer:
+    type: AdamW
+    args:
+      lr: 0.00001
+      weight_decay: 0.005 # 0.0001, 0.005
+      betas: [0.7, 0.999] # 0.7 0.999
+      amsgrad: True
+
+  loss:
+    name: focal
+    args: {}
+
+  lr_scheduler:
+    type: ReduceLROnPlateau
+    args:
+      mode: min
+
+  log_interval: 20
+
+  cut_mix:
+    prob: 0.0
+    beta: 1.
+
+trainer:
+  csv_path: ./train_all.csv
+  img_path: ../input/data/train/test_images
+  save_dir: ./model_weights
+  aug_csv_path: False

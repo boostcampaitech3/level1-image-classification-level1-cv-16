@@ -26,7 +26,7 @@ class KFold:
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
         for train_idx, test_idx in skf.split(df, df["age"] + 3 * df["gender"]):
-            # augment한 데이터를 train에 기존 데이터를 val에
+            # augment한 60대 데이터를 train에 기존 데이터를 val에 넣는 작업
             trans_train = train_idx
             trans_test = test_idx
             for t in train_idx:
@@ -46,8 +46,7 @@ class KFold:
 
             df_strat_train = self._generate_path_and_mask_and_label_field(df.loc[train_idx])
             df_strat_test = self._generate_path_and_mask_and_label_field(df.loc[test_idx])
-            # df_strat_train = df.loc[train_idx]
-            # df_strat_test = df.loc[test_idx]
+            
             self.folds.append([df_strat_train.reset_index(), df_strat_test.reset_index()])
 
     def get_preprocessed_df(self, aug_csv_path):

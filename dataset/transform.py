@@ -24,7 +24,7 @@ class Cutout(object):
             Tensor: Image with n_holes of dimension length x length cut out of it.
         """
         r = np.random.rand(1)
-        if r > 0.5:
+        if True: # r < 0.25:
             h = img.size(1)
             w = img.size(2)
 
@@ -73,7 +73,7 @@ class RandomAugTransform:
     def __init__(self, augment, resize, cutout, n=3, m=0.5, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         if augment:
             self.transform = transforms.Compose([
-                CenterCrop((400,300)),
+                CenterCrop(384),
                 # Resize(resize, Image.BILINEAR),
                 ToTensor(),
                 Cutout(1, cutout),
@@ -82,7 +82,7 @@ class RandomAugTransform:
             self.transform.transforms.insert(1, RandAugment(n, m))
         else:
             self.transform = transforms.Compose([
-                # CenterCrop(350),
+                CenterCrop(384),
                 # Resize(resize,Image.BILINEAR),
                 ToTensor(),
                 Normalize(mean=mean, std=std),

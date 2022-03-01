@@ -1,5 +1,5 @@
 ---
-name: effnetb3
+name: ViT-adamw-lr
 seed: 16
 
 wandb:
@@ -11,7 +11,7 @@ train:
   target: label # label, age, gender, mask,
 
   model:
-    name: efficientnet_b3
+    name: VisionTransformer # efficientnet_b3
 
   fold:
     n_splits: 5
@@ -31,18 +31,18 @@ train:
   data_loader:
     batch_size: 64
     shuffle: False
-    drop_last: True
+    drop_last: False
   val_data_loader:
     batch_size: 128
-    drop_last: True
+    drop_last: False
 
   optimizer:
-    type: Adam
+    type: AdamW
     args:
       lr: 0.00001
       weight_decay: 0.005 # 0.0001, 0.005
       betas: [0.7, 0.999] # 0.7 0.999
-      amsgrad: true
+      amsgrad: True
 
   loss:
     name: focal
@@ -56,7 +56,7 @@ train:
   log_interval: 20
 
   cut_mix:
-    prob: 0.0
+    prob: 0.1
     beta: 1.
 
 trainer:

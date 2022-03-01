@@ -98,7 +98,7 @@ class Trainer:
                 inputs, labels = train_batch[0].to(self.device), train_batch[1].to(self.device)
 
                 optimizer.zero_grad()
-                
+
                 # cut-mix by clova
                 r = np.random.rand(1)
                 if config.cut_mix.beta > 0 and config.cut_mix.prob > r:
@@ -131,7 +131,7 @@ class Trainer:
                     train_acc = matches / config.data_loader.batch_size / config.log_interval
                     current_lr = get_lr(optimizer)
                     print(
-                        f"Epoch[{epoch}/{config.epochs}]({idx + 1}/{len(train_loader)}) || "
+                        f"Epoch[{epoch}/{config.epochs-1}]({idx + 1}/{len(train_loader)}) || "
                         f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                     )
                     loss_value = 0

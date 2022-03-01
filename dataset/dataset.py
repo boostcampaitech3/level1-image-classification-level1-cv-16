@@ -24,6 +24,7 @@ class MaskDataset(Dataset):
         labels = self.df['label']
         return labels
 
+
 # inference에 사용됨
 class MaskTestDataset(Dataset):
     def __init__(self, df, img_path, transform = None):
