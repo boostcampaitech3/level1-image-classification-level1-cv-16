@@ -22,5 +22,6 @@ if __name__ == '__main__':
     config = DictAsMember(config)
 
     inferencer = Inferencer(**config.inferencer)
-    inferencer.inference(config.inference)
+    # inferencer.inference(config.inference)
+    inferencer.inference_with_confidence(config.inference)
     print("Inference completed!")
