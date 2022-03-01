@@ -1,0 +1,31 @@
+inference:
+  model:
+    name: efficientnet_b3
+
+  score: f1 # f1, acc, epoch5
+
+  # 학습한 모델과 동일한 설정을 사용해야 합니다!
+  # cutout은 진행되지 않습니다!
+  augmentation:
+    name: RandomAugTransform
+    args:
+      resize: 512
+      cutout: 130
+      n: 3
+      m: 0.5
+
+  # 공식 문서에 있는 설정을 더 추가할 수 있습니다
+  data_loader:
+    batch_size: 50
+    shuffle: False
+    drop_last: False
+
+  TTA:
+    flag: False
+    # transform: # rotate, scale, multiply, resize, add, vertical
+
+inferencer:
+  csv_path: ./data/eval/info.csv
+  img_path: ./data/eval/images
+  model_dir: ./model_weights/best_pth
+  save_dir: ./output
