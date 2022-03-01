@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+import timm
 
 class efficientnet_b0(nn.Module):
     def __init__(self, num_classes):
@@ -57,4 +58,18 @@ class MyModel(nn.Module):
         1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
         2. 결과로 나온 output 을 return 해주세요
         """
+        return self.model(x)
+
+class VisionTransformer(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        self.model = timm.create_model('vit_base_patch16_384', pretrained=True, num_classes=num_classes)
+    def forward(self, x):
+        return self.model(x)
+
+class SwinTransformer(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        self.model = timm.create_model('swin_base_patch4_window12_384', pretrained = True, num_classes = num_classes)
+    def forward(self, x):
         return self.model(x)
