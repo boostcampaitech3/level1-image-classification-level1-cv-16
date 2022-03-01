@@ -19,7 +19,7 @@ inference:
     drop_last: False
 
 inferencer:
-  csv_path: ./data/eval/info.csv
-  img_path: ./data/eval/images
-  model_dir: ./model_weights/effnetb3
-  save_dir: ./output
+  csv_path: ../data/eval/info.csv
+  img_path: ../data/eval/images
+  model_dir: ../model_weights/Eb3_GenderAge_
+  save_dir: ../output

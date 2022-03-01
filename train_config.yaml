@@ -1,14 +1,14 @@
 ---
-name: effnetb3
+name: Eb3_GenderAge_
 seed: 16
 
 wandb:
-  project: devlee247_v100
-  flag: False
+  project: JSH_project
+  flag: True
 
 train:
   # 학습 대상을 정할 수 있습니다.
-  target: label # label, age, gender, mask,
+  target: gender_age # label, age, gender, mask,gender_age
 
   model:
     name: efficientnet_b3
@@ -17,7 +17,7 @@ train:
     n_splits: 5
     random_state: 1004
 
-  epochs: 1
+  epochs: 5
 
   augmentation: 
     name: CutoutTransform
@@ -35,7 +35,7 @@ train:
   optimizer:
     type: Adam
     args:
-      lr: 0.00001
+      lr: 0.00003
       weight_decay: 0
       betas: [0.7, 0.999]
       amsgrad: true
@@ -52,7 +52,7 @@ train:
   log_interval: 20
 
 trainer:
-  csv_path: ./data/train/train.csv
-  img_path: ./data/train/images
-  save_dir: ./model_weights
+  csv_path: ../data/train/train.csv
+  img_path: ../data/train/images
+  save_dir: ../model_weights
   

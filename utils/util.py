@@ -16,18 +16,21 @@ def target_to_class_num(target):
     """
     학습 대상에 따라 다른 class num을 반환
     """
-    if target == 'label':
-        print("전체 클래스를 대상으로 학습이 진행됩니다.")
-        return 18
+    if target == 'mask':
+        print("마스크를 대상으로 학습이 진행됩니다.")
+        return 3
     elif target == 'age':
         print("나이를 대상으로 학습이 진행됩니다.")
         return 3
     elif target == 'gender':
         print("성별을 대상으로 학습이 진행됩니다.")
         return 2
+    elif target == 'label': # mask
+        print("전체 클래스를 대상으로 학습이 진행됩니다.")
+        return 18
     else: # mask
-        print("마스크를 대상으로 학습이 진행됩니다.")
-        return 3
+        print("성별과 나이를 대상으로 학습이 진행됩니다.")
+        return 6
 
 def makedirs(path): 
     try:    

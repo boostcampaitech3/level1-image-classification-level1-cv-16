@@ -11,7 +11,10 @@ class MaskDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.df['path'].iloc[idx]
-        label = self.df[self.target].iloc[idx]
+        if self.target == "gender_age":
+            label = self.df['label'].iloc[idx] % 6
+        else:
+            label = self.df[self.target].iloc[idx]
         image = Image.open(image_path)
         if self.transform:
             image = self.transform(image)
@@ -19,6 +22,7 @@ class MaskDataset(Dataset):
     
     def __len__(self):
         return len(self.df)
+
 
 # inference에 사용됨
 class MaskTestDataset(Dataset):
