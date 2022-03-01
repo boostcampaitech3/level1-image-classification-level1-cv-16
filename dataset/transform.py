@@ -45,7 +45,7 @@ class Cutout(object):
         return img
 
 class CutoutTransform:
-    def __init__(self, augment, resize, cutout, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
+    def __init__(self, augment, centercrop, resize, cutout, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):    
         if augment:
             self.transform = transforms.Compose([
                 CenterCrop(350),
@@ -56,7 +56,7 @@ class CutoutTransform:
             ])
         else:
             self.transform = transforms.Compose([
-                CenterCrop(350),
+                CenterCrop(centercrop),
                 Resize(resize, Image.BILINEAR),
                 ToTensor(),
                 Normalize(mean=mean, std=std),
@@ -70,6 +70,7 @@ class RandomAugTransform:
         if augment:
             self.transform = transforms.Compose([
                 CenterCrop(350),
+                RandomHorizontalFlip(p=0.5),
                 Resize(resize, Image.BILINEAR),
                 ToTensor(),
                 Cutout(1, cutout),
