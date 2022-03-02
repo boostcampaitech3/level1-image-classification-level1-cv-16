@@ -23,8 +23,8 @@ def load_model(saved_model, num_classes, device, config):
         target_name = 'best_acc'
         model_path = os.path.join(saved_model, 'best_acc.pth')
     else: # epoch
-        target_name = 'epoch' + str(config.target_epoch)
-        statedict_name = 'epoch' + str(config.target_epoch) + '.pth'
+        target_name = 'epoch' + str(5)
+        statedict_name = 'epoch' + str(5) + '.pth'
         model_path = os.path.join(saved_model, statedict_name)
 
     model.load_state_dict(torch.load(model_path, map_location=device))

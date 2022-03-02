@@ -54,6 +54,7 @@ class CutoutTransform:
                 Cutout(1, cutout),
                 Normalize(mean=mean, std=std),
             ])
+            # self.transform.transforms.insert(1, RandAugment(n,m))
         else:
             self.transform = transforms.Compose([
                 CenterCrop(350),

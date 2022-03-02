@@ -21,5 +21,5 @@ inference:
 inferencer:
   csv_path: ../data/eval/info.csv
   img_path: ../data/eval/images
-  model_dir: ../model_weights/Eb3_mask_only_lr*2
-  save_dir: ../output/
+  model_dir: ../model_weights/Eb3_age_only
+  save_dir: ../output/Eb3_age_only

@@ -1,5 +1,5 @@
 ---
-name: Eb1_maskgender_only
+name: Eb2_maskgender_only
 seed: 16
 
 wandb:
@@ -11,7 +11,7 @@ train:
   target: mask_gender # label, age, gender, mask,gender_age,mask_gender
 
   model:
-    name: efficientnet_b1
+    name: efficientnet_b2
 
   fold:
     n_splits: 5
@@ -27,7 +27,7 @@ train:
 
   # 공식 문서에 있는 설정을 더 추가할 수 있습니다
   data_loader:
-    batch_size: 32
+    batch_size: 16
     shuffle: True
   val_data_loader:
     batch_size: 50
