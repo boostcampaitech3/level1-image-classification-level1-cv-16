@@ -13,6 +13,8 @@ class MaskDataset(Dataset):
         image_path = self.df['path'].iloc[idx]
         if self.target == "gender_age":
             label = self.df['label'].iloc[idx] % 6
+        elif self.target == "mask_gender":
+            label = self.df['label'].iloc[idx] // 3 * 3 % 6
         else:
             label = self.df[self.target].iloc[idx]
         image = Image.open(image_path)

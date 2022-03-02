@@ -28,8 +28,11 @@ def target_to_class_num(target):
     elif target == 'label': # mask
         print("전체 클래스를 대상으로 학습이 진행됩니다.")
         return 18
-    else: # mask
+    elif target == 'gender_age': # mask
         print("성별과 나이를 대상으로 학습이 진행됩니다.")
+        return 6
+    else:
+        print("마스크와 성별을 대상으로 학습이 진행됩니다.")
         return 6
 
 def makedirs(path): 

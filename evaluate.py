@@ -11,7 +11,7 @@ import yaml
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch Template')
-    parser.add_argument('-c', '--config', default=None, type=str,
+    parser.add_argument('-c', '--config', default="inference_config.yaml", type=str,
                       help='config file path (default: None)')
 
     args = parser.parse_args()
