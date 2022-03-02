@@ -17,7 +17,7 @@ train:
     n_splits: 5
     random_state: 1004
 
-  epochs: 3
+  epochs: 15
 
   augmentation: 
     name: CutoutTransform

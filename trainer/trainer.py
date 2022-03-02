@@ -32,7 +32,37 @@ class Trainer:
 
     def train(self, config, pseudo_df=None):
 
+        folds = KFold(csv_path=self.csv_path, img_path=self.img_path, **config.fold)
+ 
+        train_df, val_df = folds[0] # 나중에는 fold 다 돌면서 진행해도 됨
 
+        if pseudo_df:
+            train_df = pd.concat([pseudo_df, train_df])
+
+        if self.aug_csv_path:
+            aug_df = folds.get_preprocessed_df(self.aug_csv_path)
+            train_df = pd.concat([aug_df, train_df])
+
+        # -- transform
+        transform_module = getattr(import_module("dataset"), config.augmentation.name)
+        train_transform = transform_module(augment=True, **config.augmentation.args)
+        test_transform = transform_module(augment=False, **config.augmentation.args)
+
+        train_set = MaskDataset(train_df, transform=train_transform, target=config.target)
+        val_set = MaskDataset(val_df, transform=test_transform, target=config.target)
+
+        train_loader = DataLoader(
+            train_set, 
+            num_workers=multiprocessing.cpu_count()//2,
+            pin_memory=self.use_cuda,
+            **config.data_loader
+        )
+        val_loader = DataLoader(
+            val_set,
+            num_workers=multiprocessing.cpu_count()//2,
+            pin_memory=self.use_cuda,
+            **config.val_data_loader
+        )
 
         num_class = target_to_class_num(config.target)
 
@@ -57,118 +87,87 @@ class Trainer:
 
         self.wandb.watch(model)
 
-        folds = KFold(csv_path=self.csv_path, img_path=self.img_path, **config.fold)
- 
-        for i, (train_df, val_df) in enumerate(folds): # 나중에는 fold 다 돌면서 진행해도 됨
-            print(f"---------{i+1}번째 kfold 사용---------")
-            if pseudo_df:
-                train_df = pd.concat([pseudo_df, train_df])
 
-            if self.aug_csv_path:
-                aug_df = folds.get_preprocessed_df(self.aug_csv_path)
-                train_df = pd.concat([aug_df, train_df])
+        for epoch in range(config.epochs):
+            # train loop
+            model.train()
 
-            # -- transform
-            transform_module = getattr(import_module("dataset"), config.augmentation.name)
-            train_transform = transform_module(augment=True, **config.augmentation.args)
-            test_transform = transform_module(augment=False, **config.augmentation.args)
+            loss_value = 0
+            matches = 0
 
-            train_set = MaskDataset(train_df, transform=train_transform, target=config.target)
-            val_set = MaskDataset(val_df, transform=test_transform, target=config.target)
+            for idx, train_batch in enumerate(train_loader):
+                inputs, labels = train_batch[0].to(self.device), train_batch[1].to(self.device)
 
-            train_loader = DataLoader(
-                train_set, 
-                num_workers=multiprocessing.cpu_count()//2,
-                pin_memory=self.use_cuda,
-                **config.data_loader
-            )
-            val_loader = DataLoader(
-                val_set,
-                num_workers=multiprocessing.cpu_count()//2,
-                pin_memory=self.use_cuda,
-                **config.val_data_loader
-            )
+                optimizer.zero_grad()
 
-            for epoch in range(config.epochs):
-                # train loop
-                model.train()
+                outs = model(inputs)
+                preds = torch.argmax(outs, dim=-1)
+                loss = criterion(outs, labels)
 
-                loss_value = 0
-                matches = 0
+                loss.backward()
+                optimizer.step()
 
-                for idx, train_batch in enumerate(train_loader):
-                    inputs, labels = train_batch[0].to(self.device), train_batch[1].to(self.device)
+                loss_value += loss.item()
+                matches += (preds == labels).sum().item()
+                
+                if (idx + 1) % config.log_interval == 0:
+                    train_loss = loss_value / config.log_interval
+                    train_acc = matches / config.data_loader.batch_size / config.log_interval
+                    current_lr = get_lr(optimizer)
+                    print(
+                        f"Epoch[{epoch}/{config.epochs}]({idx + 1}/{len(train_loader)}) || "
+                        f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
+                    )
+                    loss_value = 0
+                    matches = 0
+                    self.wandb.write_log(train_loss, train_acc, current_lr)
 
-                    optimizer.zero_grad()
+            # val loop
+            with torch.no_grad():
+                print("Calculating validation results...")
+                model.eval()
+                val_loss_items = []
+                val_acc_items = []
+                label_list = []
+                pred_list = []
+
+                for val_batch in val_loader:
+                    inputs, labels = val_batch[0].to(self.device), val_batch[1].to(self.device)
 
                     outs = model(inputs)
                     preds = torch.argmax(outs, dim=-1)
-                    loss = criterion(outs, labels)
 
-                    loss.backward()
-                    optimizer.step()
+                    loss_item = criterion(outs, labels).item()
+                    acc_item = (labels == preds).sum().item()
 
-                    loss_value += loss.item()
-                    matches += (preds == labels).sum().item()
-                    
-                    if (idx + 1) % config.log_interval == 0:
-                        train_loss = loss_value / config.log_interval
-                        train_acc = matches / config.data_loader.batch_size / config.log_interval
-                        current_lr = get_lr(optimizer)
-                        print(
-                            f"Epoch[{epoch}/{config.epochs}]({idx + 1}/{len(train_loader)}) || "
-                            f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
-                        )
-                        loss_value = 0
-                        matches = 0
-                        self.wandb.write_log(train_loss, train_acc, current_lr)
+                    val_loss_items.append(loss_item)
+                    val_acc_items.append(acc_item)
+                    label_list.append(labels)
+                    pred_list.append(preds)
 
-                # val loop
-                with torch.no_grad():
-                    print("Calculating validation results...")
-                    model.eval()
-                    val_loss_items = []
-                    val_acc_items = []
-                    label_list = []
-                    pred_list = []
+                val_loss = np.sum(val_loss_items) / len(val_loader)
+                val_acc = np.sum(val_acc_items) / len(val_set)
+                f1 = f1_score(torch.cat(label_list).to('cpu'), torch.cat(pred_list).to('cpu'), average = 'macro')
+                best_val_loss = min(best_val_loss, val_loss)
 
-                    for val_batch in val_loader:
-                        inputs, labels = val_batch[0].to(self.device), val_batch[1].to(self.device)
+                scheduler.step(val_loss)
 
-                        outs = model(inputs)
-                        preds = torch.argmax(outs, dim=-1)
-
-                        loss_item = criterion(outs, labels).item()
-                        acc_item = (labels == preds).sum().item()
-
-                        val_loss_items.append(loss_item)
-                        val_acc_items.append(acc_item)
-                        label_list.append(labels)
-                        pred_list.append(preds)
-
-                    val_loss = np.sum(val_loss_items) / len(val_loader)
-                    val_acc = np.sum(val_acc_items) / len(val_set)
-                    f1 = f1_score(torch.cat(label_list).to('cpu'), torch.cat(pred_list).to('cpu'), average = 'macro')
-                    best_val_loss = min(best_val_loss, val_loss)
-
-                    scheduler.step(val_loss)
-
-                    if val_acc > best_val_acc:
-                        print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
-                        torch.save(model.module.state_dict(), f"{self.save_dir}/best_acc.pth")
-                        best_val_acc = val_acc
-                    torch.save(model.module.state_dict(), f"{self.save_dir}/last_acc.pth")
-                    if f1 > best_f1:
-                        print(f"New best model for f1 : {val_acc:4.2%}! saving the best model..")
-                        torch.save(model.module.state_dict(), f"{self.save_dir}/best_f1.pth")
-                        best_f1 = f1
-                    torch.save(model.module.state_dict(), f"{self.save_dir}/last_f1.pth")
-                    print(
-                        f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
-                        f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} || "
-                        f"F1 Score : {best_f1:.3f}\n"
-                    )
-                torch.save(model.module.state_dict(), f"{self.save_dir}/epoch{epoch}.pth")
-                self.wandb.write_log2(epoch, current_lr, val_loss, val_acc, f1)
-        self.wandb.write_log3(best_val_acc, best_f1)
+                if val_acc > best_val_acc:
+                    print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                    torch.save(model.module.state_dict(), f"{self.save_dir}/best_acc.pth")
+                    best_val_acc = val_acc
+                torch.save(model.module.state_dict(), f"{self.save_dir}/last_acc.pth")
+                if f1 > best_f1:
+                    print(f"New best model for f1 : {val_acc:4.2%}! saving the best model..")
+                    torch.save(model.module.state_dict(), f"{self.save_dir}/best_f1.pth")
+                    best_f1 = f1
+                torch.save(model.module.state_dict(), f"{self.save_dir}/last_f1.pth")
+                print(
+                    f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
+                    f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2} || "
+                    f"F1 Score : {best_f1:.3f}\n"
+                )
+            torch.save(model.module.state_dict(), f"{self.save_dir}/epoch{epoch}.pth")
+            self.wandb.write_log2(epoch, current_lr, val_loss, val_acc, f1)
+            self.wandb.write_log3(best_val_acc, best_f1)
         
