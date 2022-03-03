@@ -31,17 +31,29 @@ class Trainer:
         self.device = 'cuda' if self.use_cuda else 'cpu'
 
     def train(self, config, pseudo_df=None):
+        
+        # train 1
+        # train_df=pd.read_csv('../data/train/train_df.csv')
+        # val_df=pd.read_csv('../data/train/val_df.csv')  
+        
+        # #train 2 with mask
+        # train_df=pd.read_csv('../data/train/train_df_mask.csv')
+        # val_df=pd.read_csv('../data/train/val_df_mask.csv')
+        
+        # #train 2 with incorrect
+        train_df=pd.read_csv('../data/train/train_df_inc.csv')
+        val_df=pd.read_csv('../data/train/val_df_inc.csv')
+        
+        # #train 2 with no wear
+        # train_df=pd.read_csv('../data/train/train_df_not.csv')
+        # val_df=pd.read_csv('../data/train/val_df_not.csv')
+        
+        # if pseudo_df:
+        #     train_df = pd.concat([pseudo_df, train_df])
 
-        folds = KFold(csv_path=self.csv_path, img_path=self.img_path, **config.fold)
- 
-        train_df, val_df = folds[0] # 나중에는 fold 다 돌면서 진행해도 됨
-
-        if pseudo_df:
-            train_df = pd.concat([pseudo_df, train_df])
-
-        if self.aug_csv_path:
-            aug_df = folds.get_preprocessed_df(self.aug_csv_path)
-            train_df = pd.concat([aug_df, train_df])
+        # if self.aug_csv_path:
+        #     aug_df = folds.get_preprocessed_df(self.aug_csv_path)
+        #     train_df = pd.concat([aug_df, train_df])
 
         # -- transform
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
@@ -50,6 +62,7 @@ class Trainer:
 
         train_set = MaskDataset(train_df, transform=train_transform, target=config.target)
         val_set = MaskDataset(val_df, transform=test_transform, target=config.target)
+
 
         train_loader = DataLoader(
             train_set, 
@@ -63,13 +76,16 @@ class Trainer:
             pin_memory=self.use_cuda,
             **config.val_data_loader
         )
-
+        
+        
         num_class = target_to_class_num(config.target)
+
 
         # -- model
         model_module = getattr(import_module("model"), config.model.name)  # default: BaseModel
         model = model_module(num_classes=num_class).to(self.device)
         model = torch.nn.DataParallel(model).cuda()
+        
 
         # -- loss & metric
         loss_module = getattr(import_module("model"), criterion_entrypoint(config.loss.name))
@@ -106,7 +122,7 @@ class Trainer:
 
                 loss.backward()
                 optimizer.step()
-
+            
                 loss_value += loss.item()
                 matches += (preds == labels).sum().item()
                 
@@ -138,7 +154,7 @@ class Trainer:
                     preds = torch.argmax(outs, dim=-1)
 
                     loss_item = criterion(outs, labels).item()
-                    acc_item = (labels == preds).sum().item()
+                    acc_item = (preds == labels).sum().item()
 
                     val_loss_items.append(loss_item)
                     val_acc_items.append(acc_item)

@@ -1,5 +1,5 @@
 ---
-name: Eb3_genderage_only_inc_offaug
+name: Eb4_age_only_offaug
 seed: 16
 
 wandb:
@@ -8,17 +8,16 @@ wandb:
 
 train:
   # 학습 대상을 정할 수 있습니다.
-  target: gender_age # label, age, gender, mask,gender_age,mask_gender
+  target: age # label, age, gender, mask,gender_age,mask_gender
 
   model:
-    name: efficientnet_b3
-
+    name: efficientnet_b4
 
   fold:
     n_splits: 5
     random_state: 1004
 
-  epochs: 20
+  epochs: 25
 
   augmentation: 
     name: CutoutTransform
@@ -55,5 +54,5 @@ train:
 trainer:
   csv_path: ../data/train/test_train.csv
   img_path: ../data/train/test_images
-  save_dir: ../model_weights/final
+  save_dir: ../model_weights
   

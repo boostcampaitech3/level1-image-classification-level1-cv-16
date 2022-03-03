@@ -23,8 +23,10 @@ def load_model(saved_model, num_classes, device, config):
         target_name = 'best_acc'
         model_path = os.path.join(saved_model, 'best_acc.pth')
     else: # epoch
-        target_name = 'epoch' + str(5)
-        statedict_name = 'epoch' + str(5) + '.pth'
+        target_name = 'epoch' + str(13)
+        statedict_name = 'epoch' + str(13) + '.pth'
+
+
         model_path = os.path.join(saved_model, statedict_name)
 
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -88,7 +90,7 @@ class Inferencer:
                 ]
             TTA_transform = tta.Compose(TTA_list)
 
-        model, target_name = load_model(self.model_dir, 3, self.device, config)
+        model, target_name = load_model(self.model_dir, 6, self.device, config)
         if config.TTA.flag == True:
             print("TTA is applied...")
             model = tta.ClassificationTTAWrapper(model, TTA_transform)
@@ -133,7 +135,7 @@ class Inferencer:
         transform_module = getattr(import_module("dataset"), config.augmentation.name)
         test_transform = transform_module(augment=False, **config.augmentation.args)
 
-        model, target_name = load_model(self.model_dir, 3, self.device, config)
+        model, target_name = load_model(self.model_dir, 6, self.device, config)
         model.to(self.device)
 
         dataset = MaskTestDataset(test_df, img_path=self.img_path, transform=test_transform)

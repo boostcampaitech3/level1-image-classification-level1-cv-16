@@ -33,7 +33,7 @@ class KFold:
     def get_preprocessed_df(self, aug_csv_path):
         df = pd.read_csv(aug_csv_path)
 
-        age_label = [0, 29, 59, 120]
+        age_label = [0, 29, 56, 120]
         df['age'] = pd.cut(df['age'], age_label, labels=False)
 
         gender_label = {'male':0, 'female':1}

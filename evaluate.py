@@ -15,6 +15,7 @@ if __name__ == '__main__':
                       help='config file path (default: None)')
 
     args = parser.parse_args()
+    
 
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)

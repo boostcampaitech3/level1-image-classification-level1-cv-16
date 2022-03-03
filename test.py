@@ -1,75 +1,55 @@
-# # offline data augmentation
-# import cv2 # !apt-get -y install libgl1-mesa-glx
-# import shutil
+from dataset.kfold import KFold
+import numpy as np
+import torch
+import pandas as pd
+from torch.optim.lr_scheduler import *
+from torch.utils.data import DataLoader
+
+from sklearn.metrics import f1_score
+
+from model import criterion_entrypoint
+from dataset import MaskDataset
+from dataset.transform import *
+from utils import *
 
 
-# def createFolder(directory):
-#     try:
-#         if not os.path.exists(directory):
-#             os.makedirs(directory)
-#     except OSError:
-#         print ('Error: Creating directory. ' +  directory)
+csv_path = '../data/train/test_train.csv'
+img_path = '../data/train/test_images'
 
+folds = KFold(csv_path=csv_path, img_path=img_path, n_splits=5, random_state=1004)
+ 
+train_df, val_df = folds[0]
+
+[test]=train_df.index[train_df["path"]=='../data/train/test_images/000004_male_Asian_54/mask1.jpg'].tolist()
+print(train_df['age'].iloc[1])
+train_df['age'].iloc[1]=train_df['age'].iloc[1]*2
+print(train_df['age'].iloc[1])
+# train_df_mask, val_df_mask = pd.DataFrame(), pd.DataFrame()
+# train_df_inc, val_df_inc = pd.DataFrame(), pd.DataFrame()
+# train_df_not, val_df_not = pd.DataFrame(), pd.DataFrame()
+
+# for i in range(len(train_df)):
+#     if train_df.loc[i]['mask'] == 0:
+#         train_df_mask=pd.concat([train_df_mask,train_df.loc[[i]]])
+#     elif train_df.loc[i]['mask'] == 1:
+#         train_df_inc=pd.concat([train_df_inc,train_df.loc[[i]]])
+#     else:
+#         train_df_not=pd.concat([train_df_not,train_df.loc[[i]]])
         
+# for i in range(len(val_df)):
+#     if val_df.loc[i]['mask'] == 0:
+#         val_df_mask=pd.concat([val_df_mask,val_df.loc[[i]]])
+#     elif val_df.loc[i]['mask'] == 1:
+#         val_df_inc=pd.concat([val_df_inc,val_df.loc[[i]]])
+#     else:
+#         val_df_not=pd.concat([val_df_not,val_df.loc[[i]]])
 
-# df = pd.read_csv('/opt/ml/data/train/train.csv')
-# pat = '/opt/ml/data/train/test_images/' # 기존 image 폴더를 복사한 폴더 경로
-# df_test = pd.read_csv('/opt/ml/data/train/test_train.csv') # 기존 train.csv를 복사한 경로
 
-# # 이미지 폴더를 복사하여 사용
-# # shutil.copytree('/opt/ml/input/data/train/train/images', pat)
-
-# update = df_test
-# for i in range(len(df)):
-#     if df['age'][i] == 60:
-#         img_list = glob.glob(pat+df['path'][i]+'/*')
-        
-#         update = update.append({'id' : str(int(update.iloc[-1]['id'])+1).zfill(6),
-#                         'gender' : df_test['gender'][i],
-#                         'race' : df_test['race'][i], 'age' : 60,
-#                         'path' : df_test['path'][i]+'_inverted'}, ignore_index=True)
-#         update = update.append({'id' : str(int(update.iloc[-1]['id'])+2).zfill(6),
-#                         'gender' : df_test['gender'][i],
-#                         'race' : df_test['race'][i], 'age' : 60,
-#                         'path' : df_test['path'][i]+'_rotated'}, ignore_index=True)
-#         update = update.append({'id' : str(int(update.iloc[-1]['id'])+3).zfill(6),
-#                         'gender' : df_test['gender'][i],
-#                         'race' : df_test['race'][i], 'age' : 60,
-#                         'path' : df_test['path'][i]+'_noise'}, ignore_index=True)          
-#         update.to_csv('/opt/ml/input/data/train/test_train.csv', header=True, index=True)
-        
-#         try:
-#             target = "/".join(img_list[0].split('/')[:-1])
-#         except IndexError:
-#             print(df['path'][i])
-#             print(img_list)
-#         createFolder(target+'_inverted')
-#         createFolder(target+'_rotated')
-#         createFolder(target+'_noise')
-        
-#         for im in img_list:
-#             img = Image.open(im)
-              
-#             # 좌우반전
-#             trs_img = img.transpose(Image.FLIP_LEFT_RIGHT)
-#             trs_img.save(target+'_inverted/'+im.split('/')[-1].split('.')[0]+'_inverted.jpg')
-            
-#             # 회전
-#             trs_img = img.rotate(random.randrange(-20, 20))
-#             trs_img.save(target+'_rotated/'+im.split('/')[-1].split('.')[0]+'_rotated.jpg')
-
-#             # noise
-#             img2 = cv2.imread(im)
-#             row,col,ch= (img.size[1], img.size[0], 3)
-#             mean = 0
-#             var = 0.1
-#             sigma = var**0.5
-#             gauss = np.random.normal(mean,sigma,(row,col,ch))
-#             gauss = gauss.reshape(row,col,ch)
-#             noisy_array = img2 + gauss
-#             noisy_image = Image.fromarray(np.uint8(noisy_array)).convert('RGB')
-#             noisy_image.save(target+'_noise/'+im.split('/')[-1].split('.')[0]+'_noise.jpg')
-
-n=18
-for i in range(n):
-    print(i//3%6)
+# train_df.to_csv('../data/train/train_df.csv')
+# val_df.to_csv('../data/train/val_df.csv')
+# train_df_mask.to_csv('../data/train/train_df_mask.csv')
+# train_df_inc.to_csv('../data/train/train_df_inc.csv')
+# train_df_not.to_csv('../data/train/train_df_not.csv')
+# val_df_mask.to_csv('../data/train/val_df_mask.csv')
+# val_df_inc.to_csv('../data/train/val_df_inc.csv')
+# val_df_not.to_csv('../data/train/val_df_not.csv')
